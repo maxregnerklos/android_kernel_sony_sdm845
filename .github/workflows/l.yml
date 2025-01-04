@@ -1,4 +1,4 @@
-name: Cherry-Pick Compatible Commits from Upstream Kernel
+name: Cherry-Pick and Archive Upstream Commits
 
 on:
   push:
@@ -10,24 +10,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  cherry-pick:
+  cherry-pick-and-archive:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-
-    - name: Set up Git configuration
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-    - name: Create a new branch
-      id: create_branch
-      run: |
-        NEW_BRANCH="upstream-cherry-pick-$(date +%Y%m%d%H%M%S)"
-        echo "NEW_BRANCH=${NEW_BRANCH}" >> $GITHUB_ENV
-        git checkout -b ${NEW_BRANCH}
 
     - name: Clone upstream Linux kernel
       run: |
@@ -47,7 +35,7 @@ jobs:
         # Add remote for local repo
         git remote add local ../
         git fetch local
-        git checkout -b local-branch local/${NEW_BRANCH}
+        git checkout -b local-branch main
 
         # Cherry-pick each compatible commit
         for COMMIT in "${COMPATIBLE_COMMITS[@]}"; do
@@ -57,12 +45,15 @@ jobs:
           }
         done
 
-        # Push changes to the local repo
-        git push local local-branch:${NEW_BRANCH}
+        # Copy the changes back to the local repository directory
+        rsync -a --exclude=.git ./ ../
 
-    - name: Push changes to new branch in the repository
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        NEW_BRANCH: ${{ env.NEW_BRANCH }}
+    - name: Create zip archive
       run: |
-        git push --set-upstream origin ${NEW_BRANCH}
+        zip -r updated_kernel_files.zip *
+
+    - name: Upload zip archive as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: updated-kernel-files
+        path: updated_kernel_files.zip
