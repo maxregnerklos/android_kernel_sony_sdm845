@@ -60,7 +60,7 @@ jobs:
         zip -r ../updated_kernel_files.zip *
 
     - name: Upload zip archive as artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: updated-kernel-files
         path: updated_kernel_files.zip
