@@ -1,4 +1,4 @@
-name: Update to Kernel 5.14
+name: Cherry-Pick Compatible Commits from Upstream Kernel
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  update:
+  cherry-pick:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,37 +23,46 @@ jobs:
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
     - name: Create a new branch
+      id: create_branch
       run: |
-        NEW_BRANCH="update-to-5.14-$(date +%Y%m%d%H%M%S)"
-        git checkout -b $NEW_BRANCH
+        NEW_BRANCH="upstream-cherry-pick-$(date +%Y%m%d%H%M%S)"
+        echo "NEW_BRANCH=${NEW_BRANCH}" >> $GITHUB_ENV
+        git checkout -b ${NEW_BRANCH}
 
     - name: Clone upstream Linux kernel
       run: |
         git clone --depth 1 --branch v5.14 https://github.com/torvalds/linux.git upstream-linux
 
-    - name: Update driver files
+    - name: Cherry-pick compatible commits
       run: |
-        # Copy driver files from upstream kernel
-        cp -r upstream-linux/drivers/* drivers/
+        # List of compatible commit hashes to cherry-pick
+        COMPATIBLE_COMMITS=(
+          "commit_hash_1"
+          "commit_hash_2"
+          "commit_hash_3"
+        )
 
-    - name: Update other necessary files
-      run: |
-        # Copy other necessary files from upstream kernel
-        cp -r upstream-linux/include/* include/
-        cp -r upstream-linux/arch/arm64/configs/* arch/arm64/configs/
+        cd upstream-linux
 
-    - name: Clean up
-      run: |
-        # Remove the cloned upstream kernel to save space
-        rm -rf upstream-linux
+        # Add remote for local repo
+        git remote add local ../
+        git fetch local
+        git checkout -b local-branch local/${NEW_BRANCH}
 
-    - name: Commit changes
-      run: |
-        git add .
-        git commit -m "Update drivers and necessary files to kernel version 5.14"
+        # Cherry-pick each compatible commit
+        for COMMIT in "${COMPATIBLE_COMMITS[@]}"; do
+          git cherry-pick $COMMIT || {
+            echo "Cherry-pick failed for commit $COMMIT. Exiting."
+            exit 1
+          }
+        done
 
-    - name: Push changes to new branch
+        # Push changes to the local repo
+        git push local local-branch:${NEW_BRANCH}
+
+    - name: Push changes to new branch in the repository
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NEW_BRANCH: ${{ env.NEW_BRANCH }}
       run: |
-        git push origin HEAD:$NEW_BRANCH
+        git push --set-upstream origin ${NEW_BRANCH}
