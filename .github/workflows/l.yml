@@ -1,4 +1,4 @@
-name: Update Drivers and Push Changes
+name: Update to Kernel 5.14
 
 on:
   push:
@@ -23,35 +23,39 @@ jobs:
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
     - name: Create a new branch
+      id: create_branch
       run: |
-        NEW_BRANCH="update-drivers-$(date +%Y%m%d%H%M%S)"
-        git checkout -b $NEW_BRANCH
+        NEW_BRANCH="update-to-5.14-$(date +%Y%m%d%H%M%S)"
+        echo "branch-name=${NEW_BRANCH}" >> $GITHUB_ENV
+        git checkout -b ${NEW_BRANCH}
+
+    - name: Clone upstream Linux kernel
+      run: |
+        git clone --depth 1 --branch v5.14 https://github.com/torvalds/linux.git upstream-linux
 
     - name: Update driver files
       run: |
-        # Example of updating driver files
-        find drivers/ -type f -name "*.c" -exec sed -i '/MODULE_DESCRIPTION/s/$/ - Updated on $(date)/' {} \;
-        find drivers/ -type f -name "*.h" -exec sed -i '/MODULE_DESCRIPTION/s/$/ - Updated on $(date)/' {} \;
+        # Copy driver files from upstream kernel
+        cp -r upstream-linux/drivers/* drivers/
 
     - name: Update other necessary files
       run: |
-        # Example of modifying other necessary files
-        # Modify README.md
-        if [ -f "README.md" ]; then
-          echo 'Updating README.md'
-          echo "\n## Update on $(date)" >> README.md
-        fi
+        # Copy other necessary files from upstream kernel
+        cp -r upstream-linux/include/* include/
+        cp -r upstream-linux/arch/arm64/configs/* arch/arm64/configs/
 
-        # Modify configuration files if needed
-        find arch/arm64/configs/ -type f -name "*.config" -exec sed -i '1 i\# Updated on $(date)' {} \;
+    - name: Clean up
+      run: |
+        # Remove the cloned upstream kernel to save space
+        rm -rf upstream-linux
 
     - name: Commit changes
       run: |
         git add .
-        git commit -m "Automated update of drivers and necessary files"
+        git commit -m "Update drivers and necessary files to kernel version 5.14"
 
     - name: Push changes to new branch
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        git push origin HEAD:$NEW_BRANCH
+        git push origin $(echo $GITHUB_ENV | grep 'branch-name=' | cut -d '=' -f 2)
