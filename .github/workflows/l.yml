@@ -1,4 +1,4 @@
-name: Build and Update Kernel
+name: Update Drivers and Push Changes
 
 on:
   push:
@@ -10,57 +10,48 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  update:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up build environment
+    - name: Set up Git configuration
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-    - name: Clone Linux kernel source
+    - name: Create a new branch
       run: |
-        git clone --depth 1 --branch v5.14 https://github.com/torvalds/linux.git
-        cd linux
+        NEW_BRANCH="update-drivers-$(date +%Y%m%d%H%M%S)"
+        git checkout -b $NEW_BRANCH
 
-    - name: Apply updates to drivers
+    - name: Update driver files
       run: |
-        cd linux/drivers
-        
-        # Update driver1.c
-        if [ -f "driver1.c" ]; then
-          echo 'Updating driver1.c'
-          sed -i '/printk(KERN_INFO "Driver1 initialized"/a printk(KERN_DEBUG "Driver1 debug info");' driver1.c
+        # Example of updating driver files
+        find drivers/ -type f -name "*.c" -exec sed -i '/MODULE_DESCRIPTION/s/$/ - Updated on $(date)/' {} \;
+        find drivers/ -type f -name "*.h" -exec sed -i '/MODULE_DESCRIPTION/s/$/ - Updated on $(date)/' {} \;
+
+    - name: Update other necessary files
+      run: |
+        # Example of modifying other necessary files
+        # Modify README.md
+        if [ -f "README.md" ]; then
+          echo 'Updating README.md'
+          echo "\n## Update on $(date)" >> README.md
         fi
 
-        # Update driver2.c
-        if [ -f "driver2.c" ]; then
-          echo 'Updating driver2.c'
-          sed -i '/printk(KERN_INFO "Driver2 initialized"/a printk(KERN_DEBUG "Driver2 debug info");' driver2.c
-        fi
+        # Modify configuration files if needed
+        find arch/arm64/configs/ -type f -name "*.config" -exec sed -i '1 i\# Updated on $(date)' {} \;
 
-        # Add more driver updates as needed
-        if [ -f "example/example_driver.c" ]; then
-          echo 'Updating example_driver.c'
-          sed -i '/printk(KERN_INFO "Example driver initialized"/a printk(KERN_INFO "Simple driver change added");' example/example_driver.c
-        fi
-
-    - name: Copy existing config
+    - name: Commit changes
       run: |
-        cd linux
-        cp ../arch/arm64/configs/your_device_defconfig .config
+        git add .
+        git commit -m "Automated update of drivers and necessary files"
 
-    - name: Build the kernel
+    - name: Push changes to new branch
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        cd linux
-        make -j$(nproc)
-
-    - name: Upload kernel build artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: kernel-build
-        path: linux/arch/arm64/boot/Image.gz-dtb
+        git push origin HEAD:$NEW_BRANCH
