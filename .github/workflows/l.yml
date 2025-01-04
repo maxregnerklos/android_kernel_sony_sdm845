@@ -21,6 +21,10 @@ jobs:
       run: |
         git clone --depth 1 --branch v5.14 https://github.com/torvalds/linux.git upstream-linux
 
+    - name: Clone local repository
+      run: |
+        git clone . local-repo
+
     - name: Cherry-pick compatible commits
       run: |
         # List of compatible commit hashes to cherry-pick
@@ -33,7 +37,7 @@ jobs:
         cd upstream-linux
 
         # Add remote for local repo
-        git remote add local ../
+        git remote add local ../local-repo
         git fetch local
         git checkout -b local-branch main
 
@@ -46,14 +50,16 @@ jobs:
         done
 
         # Copy the changes back to the local repository directory
-        rsync -a --exclude=.git ./ ../
+        rsync -a --exclude=.git ./ ../local-repo/
+
+        cd ../local-repo
 
     - name: Create zip archive
       run: |
         zip -r updated_kernel_files.zip *
 
     - name: Upload zip archive as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: updated-kernel-files
         path: updated_kernel_files.zip
