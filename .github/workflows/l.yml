@@ -23,11 +23,9 @@ jobs:
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
     - name: Create a new branch
-      id: create_branch
       run: |
         NEW_BRANCH="update-to-5.14-$(date +%Y%m%d%H%M%S)"
-        echo "branch-name=${NEW_BRANCH}" >> $GITHUB_ENV
-        git checkout -b ${NEW_BRANCH}
+        git checkout -b $NEW_BRANCH
 
     - name: Clone upstream Linux kernel
       run: |
@@ -58,4 +56,4 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        git push origin $(echo $GITHUB_ENV | grep 'branch-name=' | cut -d '=' -f 2)
+        git push origin HEAD:$NEW_BRANCH
