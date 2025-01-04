@@ -39,7 +39,7 @@ jobs:
         # Add remote for local repo
         git remote add local ../local-repo
         git fetch local
-        git checkout -b local-branch main
+        git checkout main
 
         # Cherry-pick each compatible commit
         for COMMIT in "${COMPATIBLE_COMMITS[@]}"; do
@@ -49,14 +49,15 @@ jobs:
           }
         done
 
-        # Copy the changes back to the local repository directory
-        rsync -a --exclude=.git ./ ../local-repo/
+        cd ..
 
-        cd ../local-repo
+        # Copy the changes back to the local repository directory
+        rsync -a --exclude=.git upstream-linux/ local-repo/
 
     - name: Create zip archive
       run: |
-        zip -r updated_kernel_files.zip *
+        cd local-repo
+        zip -r ../updated_kernel_files.zip *
 
     - name: Upload zip archive as artifact
       uses: actions/upload-artifact@v3
