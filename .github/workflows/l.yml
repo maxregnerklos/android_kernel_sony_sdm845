@@ -1,0 +1,51 @@
+name: Build Kernel
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up build environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev
+
+    - name: Clone Linux kernel source
+      run: |
+        git clone --depth 1 --branch v5.14 https://github.com/torvalds/linux.git
+        cd linux
+
+    - name: Apply device-specific patches
+      run: |
+        cd linux
+        # Assuming your patches are in a directory named patches
+        for patch in ../patches/*.patch; do
+          git apply $patch
+        done
+
+    - name: Copy existing config
+      run: |
+        cd linux
+        cp ../arch/arm64/configs/your_device_defconfig .config
+
+    - name: Build the kernel
+      run: |
+        cd linux
+        make -j$(nproc)
+
+    - name: Upload kernel build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: kernel-build
+        path: linux/arch/arm64/boot/Image.gz-dtb
