@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,7 +30,7 @@ jobs:
     - name: Apply device-specific patches
       run: |
         cd linux
-        # Assuming your patches are in a directory named patches
+        # Applying multiple patches
         for patch in ../patches/*.patch; do
           git apply $patch
         done
@@ -49,4 +50,3 @@ jobs:
       with:
         name: kernel-build
         path: linux/arch/arm64/boot/Image.gz-dtb
-
