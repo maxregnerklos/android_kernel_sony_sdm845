@@ -19,7 +19,7 @@ jobs:
 
     - name: Clone upstream Linux kernel
       run: |
-        git clone --depth 1 --branch v5.14 https://github.com/torvalds/linux.git upstream-linux
+        git clone --branch v5.14 https://github.com/torvalds/linux.git upstream-linux
 
     - name: Clone local repository
       run: |
@@ -39,7 +39,7 @@ jobs:
         # Add remote for local repo
         git remote add local ../local-repo
         git fetch local
-        git checkout main
+        git checkout -b local-branch local/main
 
         # Cherry-pick each compatible commit
         for COMMIT in "${COMPATIBLE_COMMITS[@]}"; do
@@ -60,7 +60,7 @@ jobs:
         zip -r ../updated_kernel_files.zip *
 
     - name: Upload zip archive as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: updated-kernel-files
         path: updated_kernel_files.zip
