@@ -1,4 +1,4 @@
-name: Build Kernel
+name: Build and Update Kernel
 
 on:
   push:
@@ -27,13 +27,27 @@ jobs:
         git clone --depth 1 --branch v5.14 https://github.com/torvalds/linux.git
         cd linux
 
-    - name: Apply device-specific patches
+    - name: Apply updates to drivers
       run: |
-        cd linux
-        # Applying multiple patches
-        for patch in ../patches/*.patch; do
-          git apply $patch
-        done
+        cd linux/drivers
+        
+        # Update driver1.c
+        if [ -f "driver1.c" ]; then
+          echo 'Updating driver1.c'
+          sed -i '/printk(KERN_INFO "Driver1 initialized"/a printk(KERN_DEBUG "Driver1 debug info");' driver1.c
+        fi
+
+        # Update driver2.c
+        if [ -f "driver2.c" ]; then
+          echo 'Updating driver2.c'
+          sed -i '/printk(KERN_INFO "Driver2 initialized"/a printk(KERN_DEBUG "Driver2 debug info");' driver2.c
+        fi
+
+        # Add more driver updates as needed
+        if [ -f "example/example_driver.c" ]; then
+          echo 'Updating example_driver.c'
+          sed -i '/printk(KERN_INFO "Example driver initialized"/a printk(KERN_INFO "Simple driver change added");' example/example_driver.c
+        fi
 
     - name: Copy existing config
       run: |
@@ -46,7 +60,7 @@ jobs:
         make -j$(nproc)
 
     - name: Upload kernel build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: kernel-build
         path: linux/arch/arm64/boot/Image.gz-dtb
